@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Logs and runtime state (not source-controlled)
+logs/
+
+# Debug screenshots (development artefacts)
+debug_*.png
+debug_screenshots/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Claude Code settings (local-only)
+.claude/
+
+# Development / exploration scripts (not part of the app)
+blind_booking.py
+blind_booking_algorithmus.md
+other_approach.py
+other_approach2.py
+test_airport.py
+test_browser.py
+test_date_debug.py
+test_form_fields.py
+test_multi_selection.py
+test_no_flight_text.py
+test_stadtabenteuer.py

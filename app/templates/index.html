@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eurowings Blind Booking Finder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #c0003c 0%, #8b0029 100%);
+      color: #fff;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; }
+    header span { font-size: 1.8rem; }
+
+    main {
+      max-width: 900px;
+      margin: 32px auto;
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ---- Search card ---- */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    }
+    .card h2 { font-size: 1.1rem; color: #555; margin-bottom: 20px; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: .85rem; font-weight: 600; color: #444; }
+    input, select {
+      padding: 10px 12px;
+      border: 1.5px solid #dde2ec;
+      border-radius: 8px;
+      font-size: .95rem;
+      background: #fafbfc;
+      transition: border-color .2s;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #c0003c;
+      background: #fff;
+    }
+
+    .pax-row {
+      display: flex;
+      gap: 12px;
+    }
+    .pax-row .form-group { flex: 1; }
+
+    .btn-search {
+      margin-top: 8px;
+      width: 100%;
+      padding: 13px;
+      background: #c0003c;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-search:hover { background: #a00032; }
+    .btn-search:active { transform: scale(.98); }
+    .btn-search:disabled { background: #aaa; cursor: not-allowed; }
+
+    /* ---- Results ---- */
+    #results { display: flex; flex-direction: column; gap: 16px; }
+
+    .theme-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      overflow: hidden;
+    }
+    .theme-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f8f9fc;
+      border-bottom: 1px solid #eee;
+    }
+    .theme-name { font-weight: 700; font-size: 1rem; }
+    .theme-status { margin-left: auto; font-size: .8rem; color: #888; }
+    .theme-body { padding: 16px 20px; }
+
+    .current-query {
+      font-size: .82rem;
+      color: #888;
+      min-height: 1.5em;
+      margin-bottom: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .log-toggle {
+      font-size: .75rem;
+      color: #999;
+      background: none;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 2px 8px;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+    .log-toggle:hover { background: #f5f5f5; }
+
+    .query-log {
+      display: none;
+      list-style: none;
+      font-size: .78rem;
+      font-family: monospace;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      border: 1px solid #eee;
+      border-radius: 6px;
+      padding: 6px 8px;
+      background: #fafafa;
+    }
+    .query-log.visible { display: block; }
+    .query-log li { padding: 1px 0; white-space: nowrap; }
+    .query-log .hit  { color: #2d6a4f; }
+    .query-log .miss { color: #999; }
+
+    .cities-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .city-chip {
+      padding: 5px 13px;
+      border-radius: 20px;
+      font-size: .82rem;
+      font-weight: 600;
+      transition: background .3s, color .3s;
+    }
+    .city-chip.unknown     { background: #f0f0f0; color: #aaa; }
+    .city-chip.available   { background: #e6f4ea; color: #2d6a4f; }
+    .city-chip.uncertain   { background: #fff3cd; color: #856404; }
+    .city-chip.unavailable { display: none; }
+
+    .status-bar {
+      padding: 12px 20px;
+      background: #fffbe6;
+      border-top: 1px solid #ffe58f;
+      font-size: .85rem;
+      color: #7a6000;
+      display: none;
+    }
+    .status-bar.active { display: block; }
+
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.full { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>✈️</span>
+  <h1>Eurowings Blind Booking Finder</h1>
+</header>
+
+<main>
+  <!-- Search Form -->
+  <div class="card">
+    <h2>Suchparameter</h2>
+    <form id="searchForm">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label for="airport">Abflughafen</label>
+          <select id="airport" name="airport" required>
+            {% for ap in airports %}
+            <option value="{{ ap.code }}">{{ ap.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="outbound">Frühester Hinflug</label>
+          <input type="date" id="outbound" name="outbound">
+        </div>
+        <div class="form-group">
+          <label for="return_date">Spätester Rückflug</label>
+          <input type="date" id="return_date" name="return_date">
+        </div>
+
+        <div class="form-group">
+          <label for="min_nights">Min. Übernachtungen</label>
+          <input type="number" id="min_nights" name="min_nights" value="2" min="2" max="42">
+        </div>
+        <div class="form-group">
+          <label for="max_nights">Max. Übernachtungen</label>
+          <input type="number" id="max_nights" name="max_nights" value="7" min="2" max="42">
+        </div>
+
+        <div class="form-group full">
+          <label>Passagiere</label>
+          <div class="pax-row">
+            <div class="form-group">
+              <label for="adults" style="font-weight:400;font-size:.8rem;">Erwachsene (ab 12)</label>
+              <select id="adults" name="adults">
+                {% for i in range(1, 10) %}<option value="{{ i }}" {% if i==1 %}selected{% endif %}>{{ i }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="children" style="font-weight:400;font-size:.8rem;">Kinder (2–11)</label>
+              <select id="children" name="children">
+                {% for i in range(0, 10) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="infants" style="font-weight:400;font-size:.8rem;">Kleinkinder (0–23 M)</label>
+              <select id="infants" name="infants">
+                {% for i in range(0, 5) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-search" id="btnSearch">
+        🔍 Suche starten
+      </button>
+    </form>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar" id="statusBar"></div>
+
+  <!-- Results -->
+  <div id="results"></div>
+</main>
+
+<script>
+  const form      = document.getElementById('searchForm');
+  const btnSearch = document.getElementById('btnSearch');
+  const statusBar = document.getElementById('statusBar');
+  const results   = document.getElementById('results');
+
+  // Date limits and nights constraint logic
+  (function() {
+    const toISO = d => d.toISOString().split('T')[0];
+    const today  = new Date();
+    const maxDay = new Date(today);
+    maxDay.setDate(maxDay.getDate() + 42);
+    ['outbound','return_date'].forEach(id => {
+      const el = document.getElementById(id);
+      el.min = toISO(today);
+      el.max = toISO(maxDay);
+    });
+  })();
+
+  function updateNightsLimits() {
+    const outVal  = document.getElementById('outbound').value;
+    const retVal  = document.getElementById('return_date').value;
+    const minEl   = document.getElementById('min_nights');
+    const maxEl   = document.getElementById('max_nights');
+    if (outVal && retVal) {
+      const days = Math.floor((new Date(retVal) - new Date(outVal)) / 86400000);
+      const cap  = Math.max(2, days);
+      minEl.max = cap;
+      maxEl.max = cap;
+      if (parseInt(maxEl.value) > cap) maxEl.value = cap;
+      if (parseInt(minEl.value) > cap) minEl.value = cap;
+    }
+    enforceNightsOrder();
+  }
+
+  function enforceNightsOrder() {
+    const minEl  = document.getElementById('min_nights');
+    const maxEl  = document.getElementById('max_nights');
+    let   minVal = parseInt(minEl.value) || 2;
+    let   maxVal = parseInt(maxEl.value) || 2;
+    if (minVal < 2) { minVal = 2; minEl.value = 2; }
+    if (maxVal < minVal) maxEl.value = minVal;
+  }
+
+  document.getElementById('outbound').addEventListener('change', updateNightsLimits);
+  document.getElementById('return_date').addEventListener('change', updateNightsLimits);
+  document.getElementById('min_nights').addEventListener('change', () => {
+    enforceNightsOrder();
+    // Also ensure max >= new min
+    const minVal = parseInt(document.getElementById('min_nights').value) || 2;
+    const maxEl  = document.getElementById('max_nights');
+    if (parseInt(maxEl.value) < minVal) maxEl.value = minVal;
+  });
+  document.getElementById('max_nights').addEventListener('change', () => {
+    const maxEl  = document.getElementById('max_nights');
+    const minVal = parseInt(document.getElementById('min_nights').value) || 2;
+    if (parseInt(maxEl.value) < minVal) maxEl.value = minVal;
+  });
+
+  function toEWDate(iso) {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}.${m}.${y}`;
+  }
+
+  // theme_name → { card, log, chips, priceBox, priceValue }
+  const themeCards = {};
+
+  function setStatus(msg) {
+    statusBar.textContent = msg;
+    statusBar.classList.toggle('active', !!msg);
+  }
+
+  function mkThemeCard(themeName) {
+    if (themeCards[themeName]) return themeCards[themeName];
+
+    const card = document.createElement('div');
+    card.className = 'theme-card';
+    card.innerHTML = `
+      <div class="theme-header">
+        <span class="theme-icon">⏳</span>
+        <span class="theme-name">${themeName}</span>
+        <span class="theme-status">Suche läuft…</span>
+      </div>
+      <div class="theme-body">
+        <div class="current-query"></div>
+        <button class="log-toggle" onclick="toggleLog(this)">Log anzeigen</button>
+        <ul class="query-log"></ul>
+        <div class="cities-grid"></div>
+      </div>`;
+    results.appendChild(card);
+
+    const entry = {
+      card,
+      icon:    card.querySelector('.theme-icon'),
+      status:  card.querySelector('.theme-status'),
+      query:   card.querySelector('.current-query'),
+      log:     card.querySelector('.query-log'),
+      chips:   card.querySelector('.cities-grid'),
+      count:   0,
+    };
+    themeCards[themeName] = entry;
+    return entry;
+  }
+
+  function initCities(theme, cities) {
+    const entry = mkThemeCard(theme);
+    entry.chips.innerHTML = '';
+    for (const city of cities) {
+      const chip = document.createElement('span');
+      chip.className = 'city-chip unknown';
+      chip.dataset.city = city;
+      chip.textContent = city;
+      entry.chips.appendChild(chip);
+    }
+  }
+
+  function toggleLog(btn) {
+    const log = btn.nextElementSibling;
+    const visible = log.classList.toggle('visible');
+    btn.textContent = visible ? 'Log ausblenden' : 'Log anzeigen';
+  }
+
+  function addQueryLog(theme, step, hasPrice) {
+    const entry = mkThemeCard(theme);
+    entry.count++;
+    entry.query.textContent = `→ ${step}  (${entry.count})`;
+    const li = document.createElement('li');
+    li.className = hasPrice ? 'hit' : 'miss';
+    li.textContent = (hasPrice ? '✓ ' : '✗ ') + step;
+    entry.log.appendChild(li);
+    if (entry.log.classList.contains('visible')) {
+      entry.log.scrollTop = entry.log.scrollHeight;
+    }
+  }
+
+  function updateChip(theme, city, state) {
+    const entry = mkThemeCard(theme);
+    const chip = entry.chips.querySelector(`[data-city="${CSS.escape(city)}"]`);
+    if (!chip) return;
+    chip.className = `city-chip ${state}`;
+    if (state === 'available')  chip.textContent = '✅ ' + city;
+    else if (state === 'uncertain') chip.textContent = '❓ ' + city;
+    else chip.textContent = city;
+  }
+
+  function finishTheme(theme, data) {
+    const entry = mkThemeCard(theme);
+    entry.query.textContent = '';
+
+    if (data.error) {
+      entry.icon.textContent = '⚠️';
+      entry.status.textContent = data.error;
+      return;
+    }
+
+    const certain   = (data.available_cities || []).length;
+    const uncertain = (data.uncertain_cities || []).length;
+    const total = certain + uncertain;
+    entry.icon.textContent = total > 0 ? (uncertain > 0 ? '❓' : '✅') : '—';
+    if (total === 0) {
+      entry.status.textContent = 'Keine Flüge';
+    } else if (uncertain === 0) {
+      entry.status.textContent = `${certain} verfügbar`;
+    } else {
+      entry.status.textContent = `${certain} sicher, ${uncertain} unsicher`;
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    results.innerHTML = '';
+    Object.keys(themeCards).forEach(k => delete themeCards[k]);
+    setStatus('Suche wird gestartet…');
+    btnSearch.disabled = true;
+    btnSearch.textContent = '⏳ Suche läuft…';
+
+    const body = {
+      airport:     document.getElementById('airport').value,
+      outbound:    toEWDate(document.getElementById('outbound').value),
+      return_date: toEWDate(document.getElementById('return_date').value),
+      adults:      parseInt(document.getElementById('adults').value),
+      children:    parseInt(document.getElementById('children').value),
+      infants:     parseInt(document.getElementById('infants').value),
+      min_nights:  parseInt(document.getElementById('min_nights').value) || 2,
+      max_nights:  parseInt(document.getElementById('max_nights').value) || 7,
+    };
+
+    let searchId;
+    try {
+      const res = await fetch('/search', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      searchId = data.search_id;
+    } catch (err) {
+      setStatus('Fehler beim Starten der Suche: ' + err.message);
+      btnSearch.disabled = false;
+      btnSearch.textContent = '🔍 Suche starten';
+      return;
+    }
+
+    const es = new EventSource(`/search/${searchId}/stream`);
+
+    es.addEventListener('themes_discovered', (e) => {
+      const d = JSON.parse(e.data);
+      setStatus(`${d.count} Reisethemen gefunden – Analyse läuft parallel…`);
+      d.themes.forEach(t => mkThemeCard(t));
+    });
+
+    es.addEventListener('theme_start', (e) => {
+      const d = JSON.parse(e.data);
+      mkThemeCard(d.theme);
+    });
+
+    es.addEventListener('cities_loaded', (e) => {
+      const d = JSON.parse(e.data);
+      initCities(d.theme, d.cities);
+    });
+
+    es.addEventListener('progress', (e) => {
+      const d = JSON.parse(e.data);
+      addQueryLog(d.theme, d.step, d.has_price);
+    });
+
+    es.addEventListener('city_result', (e) => {
+      const d = JSON.parse(e.data);
+      updateChip(d.theme, d.city, d.state);
+    });
+
+    es.addEventListener('theme_done', (e) => {
+      const d = JSON.parse(e.data);
+      finishTheme(d.theme, d);
+    });
+
+    es.addEventListener('error', (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        setStatus('Fehler: ' + d.message);
+      } catch (_) {}
+    });
+
+    es.addEventListener('done', (e) => {
+      es.close();
+      setStatus('');
+      btnSearch.disabled = false;
+      btnSearch.textContent = '🔍 Suche starten';
+    });
+
+    es.onerror = () => {
+      es.close();
+      setStatus('Verbindung unterbrochen.');
+      btnSearch.disabled = false;
+      btnSearch.textContent = '🔍 Suche starten';
+    };
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+playwright
+playwright-stealth
+jinja2
+python-multipart

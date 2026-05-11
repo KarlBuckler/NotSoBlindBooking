@@ -1,0 +1,21 @@
+# Default: normalise line endings in the index
+* text=auto
+
+# Shell scripts must always be LF on checkout (CRLF breaks bash on Linux)
+*.sh  text eol=lf
+
+# PowerShell scripts: keep CRLF on Windows, LF elsewhere (both work)
+*.ps1 text eol=lf
+
+# Python source: normalise, let checkout use platform default
+*.py text
+
+# HTML / CSS / JS: normalise
+*.html text
+*.css  text
+*.js   text
+
+# Binary files: no conversion
+*.png binary
+*.jpg binary
+*.ico binary
